@@ -115,6 +115,10 @@ def create_app(config_class=Config):
 
     return app
 
+# Vercel's Python runtime needs a Flask application object at module level.
+# Keep both names available for WSGI-compatible hosting platforms.
+app = create_app()
+application = app
+
 if __name__ == '__main__':
-    application = create_app()
-    application.run(debug=True, host='127.0.0.1', port=5000)
+    app.run(debug=False, host='0.0.0.0', port=5000)

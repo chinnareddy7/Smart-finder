@@ -1,0 +1,14 @@
+SMART LOST & FOUND - VERCEL DEPLOYMENT NOTES
+
+1. Upload the CONTENTS of this ZIP to the root of your GitHub repository.
+   app.py must be at the repository root, not inside an extra "smart finder" folder.
+2. In Vercel, set the project Root Directory to ./ (repository root).
+3. Redeploy. app.py now exports both `app` and `application` at module level.
+4. Set a strong SECRET_KEY in Vercel Project Settings > Environment Variables.
+5. IMPORTANT DATA LIMITATION: this project currently defaults to a local SQLite
+   database and local image uploads. Vercel serverless filesystems are not durable.
+   For real multi-user use, configure a hosted PostgreSQL database through DATABASE_URL
+   and object storage for uploaded images. Do not rely on local SQLite or local uploads
+   for persistent production data on Vercel.
+6. The app creates database tables at startup, but demo seed data is not automatically
+   loaded by the Vercel entrypoint. Use the project's seed process separately if needed.
