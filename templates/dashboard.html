@@ -1,0 +1,335 @@
+{% extends 'base.html' %}
+
+{% block title %}Student Dashboard - Smart Lost & Found{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Welcome Header Banner -->
+    <div class="card border-0 rounded-4 p-4 mb-4 text-white shadow-sm" style="background: linear-gradient(135deg, #0f2444 0%, #1e3a8a 100%);">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <div class="d-flex align-items-center gap-3 mb-2">
+                    <span class="brand-icon-box" style="width: 48px; height: 48px; font-size: 1.4rem;">
+                        <i class="bi bi-mortarboard-fill"></i>
+                    </span>
+                    <div>
+                        <h2 class="fw-bold mb-0">Hello, {{ current_user.name }}!</h2>
+                        <span class="badge bg-white-50 text-white me-2">{{ current_user.student_id }}</span>
+                        <span class="text-white-50 small"><i class="bi bi-building me-1"></i>{{ current_user.department }}</span>
+                    </div>
+                </div>
+                <p class="text-white-50 mb-0 small">
+                    Campus Lost & Found Command Hub &bull; Keep track of your reports, AI match notifications, and ownership claims.
+                </p>
+            </div>
+            <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+                <div class="d-flex flex-wrap justify-content-lg-end gap-2">
+                    <a href="{{ url_for('lost.report') }}" class="btn btn-danger btn-sm rounded-pill px-3 py-2 shadow-sm">
+                        <i class="bi bi-exclamation-triangle me-1"></i> Report Lost
+                    </a>
+                    <a href="{{ url_for('found.report') }}" class="btn btn-primary-custom btn-sm rounded-pill px-3 py-2 shadow-sm">
+                        <i class="bi bi-box-seam me-1"></i> Report Found
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats Cards Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-box">
+                <div class="stat-icon primary"><i class="bi bi-question-circle-fill"></i></div>
+                <div>
+                    <div class="stat-value">{{ my_lost_count }}</div>
+                    <div class="stat-label">My Lost Reports</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-box">
+                <div class="stat-icon purple"><i class="bi bi-box-seam-fill"></i></div>
+                <div>
+                    <div class="stat-value">{{ my_found_count }}</div>
+                    <div class="stat-label">My Found Reports</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-box">
+                <div class="stat-icon primary ai-pulse"><i class="bi bi-stars"></i></div>
+                <div>
+                    <div class="stat-value text-primary">{{ ai_matches|length }}</div>
+                    <div class="stat-label">AI Suggested Matches</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-box">
+                <div class="stat-icon success"><i class="bi bi-check-circle-fill"></i></div>
+                <div>
+                    <div class="stat-value text-success">{{ my_recovered_count }}</div>
+                    <div class="stat-label">Items Recovered</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Incoming Pending Contact Requests Alert (if any) -->
+    {% if pending_requests %}
+    <div class="alert alert-warning border-warning shadow-sm rounded-4 p-4 mb-4">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-person-exclamation fs-3 text-warning"></i>
+                <h5 class="fw-bold mb-0 text-dark">Action Required: You Have Pending Claim Requests!</h5>
+            </div>
+            <a href="{{ url_for('student.my_reports', tab='incoming') }}" class="btn btn-sm btn-warning rounded-pill fw-bold">
+                Manage Inquiries ({{ pending_requests|length }})
+            </a>
+        </div>
+        <div class="row g-3">
+            {% for req in pending_requests %}
+            <div class="col-md-6">
+                <div class="bg-white rounded-3 p-3 border">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="badge bg-primary-subtle text-primary fw-bold">
+                            {{ req.sender.name }} ({{ req.sender.student_id }})
+                        </span>
+                        <small class="text-muted">{{ req.created_at|time_ago }}</small>
+                    </div>
+                    <div class="small fw-semibold text-dark">Regarding: {{ req.lost_item.item_name if req.lost_item else req.found_item.item_name }}</div>
+                    <p class="small text-muted mb-2 fst-italic">"{{ req.message[:90] }}..."</p>
+                    <div class="d-flex gap-2">
+                        <form method="POST" action="{{ url_for('requests.respond_request', req_id=req.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <input type="hidden" name="action" value="accept">
+                            <button type="submit" class="btn btn-success btn-sm rounded-pill px-3 py-1">
+                                <i class="bi bi-check-lg"></i> Accept & Share Contact
+                            </button>
+                        </form>
+                        <form method="POST" action="{{ url_for('requests.respond_request', req_id=req.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <input type="hidden" name="action" value="reject">
+                            <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-3 py-1">
+                                <i class="bi bi-x-lg"></i> Decline
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Main Dashboard Row: AI Matches (Left) & Notifications + Recent (Right) -->
+    <div class="row g-4">
+        <!-- Left: AI Matches for Student's Reports -->
+        <div class="col-lg-8">
+            <div class="card border-0 rounded-4 shadow-sm bg-white p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h4 class="fw-bold text-dark mb-1">
+                            <i class="bi bi-stars text-primary me-2"></i>AI Suggested Matches
+                        </h4>
+                        <p class="text-muted small mb-0">ML engine continuously scans all active found reports for similarities</p>
+                    </div>
+                    <a href="{{ url_for('matches.index') }}" class="btn btn-outline-primary btn-sm rounded-pill">
+                        View All Matches <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+
+                {% if ai_matches %}
+                    <div class="d-flex flex-column gap-3">
+                        {% for match in ai_matches %}
+                        <div class="ai-match-card p-3 border rounded-3">
+                            <div class="row align-items-center g-3">
+                                <div class="col-auto">
+                                    <div class="score-badge-circle {% if match.similarity_score >= 70 %}score-badge-high{% elif match.similarity_score >= 45 %}score-badge-mid{% else %}score-badge-fair{% endif %}">
+                                        <span class="score-number">{{ match.similarity_score|round|int }}%</span>
+                                        <span class="score-text">Match</span>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                        <span class="badge bg-danger-subtle text-danger fw-bold"><i class="bi bi-question-circle me-1"></i>Your Lost: {{ match.lost_item.item_name }}</span>
+                                        <i class="bi bi-arrow-left-right text-muted small"></i>
+                                        <span class="badge bg-primary-subtle text-primary fw-bold"><i class="bi bi-box-seam me-1"></i>Found: {{ match.found_item.item_name }}</span>
+                                    </div>
+                                    <p class="small text-muted mb-2">
+                                        <i class="bi bi-cpu me-1 text-info"></i> {{ match.explanation }}
+                                    </p>
+                                    <div class="d-flex flex-wrap align-items-center gap-2 small">
+                                        <span class="badge bg-light text-dark border">
+                                            <i class="bi bi-file-text me-1"></i> Text Similarity: {{ match.text_score }}%
+                                        </span>
+                                        <span class="badge {% if match.category_match %}bg-success-subtle text-success{% else %}bg-secondary-subtle text-secondary{% endif %}">
+                                            <i class="bi bi-tags me-1"></i> Category: {{ 'Matched' if match.category_match else 'Partial' }}
+                                        </span>
+                                        <span class="badge {% if match.location_match %}bg-success-subtle text-success{% else %}bg-secondary-subtle text-secondary{% endif %}">
+                                            <i class="bi bi-geo-alt me-1"></i> Location: {{ 'Identical' if match.location_match else 'Nearby' }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="col-md-auto text-end">
+                                    <a href="{{ url_for('found.details', item_id=match.found_item.id) }}" class="btn btn-sm btn-primary-custom rounded-pill px-3">
+                                        Inspect Item
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5 bg-light rounded-3">
+                        <i class="bi bi-magic fs-1 text-muted"></i>
+                        <h6 class="mt-2 text-dark fw-bold">No High Probability AI Matches Found Yet</h6>
+                        <p class="text-muted small max-w-500 mx-auto mb-3">
+                            When someone reports a found item matching your lost description, our TF-IDF algorithm will automatically identify it and alert you.
+                        </p>
+                        <a href="{{ url_for('lost.report') }}" class="btn btn-outline-primary btn-sm rounded-pill">
+                            Report Another Lost Item
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Quick Overview of My Recent Reports -->
+            <div class="card border-0 rounded-4 shadow-sm bg-white p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold text-dark mb-0">
+                        <i class="bi bi-clock-history text-secondary me-2"></i>My Recent Reports
+                    </h5>
+                    <a href="{{ url_for('student.my_reports') }}" class="btn btn-outline-secondary btn-sm rounded-pill">
+                        Manage All Reports
+                    </a>
+                </div>
+
+                {% if recent_lost or recent_found %}
+                    <div class="table-responsive">
+                        <table class="table custom-table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Type</th>
+                                    <th>Category</th>
+                                    <th>Location</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in recent_lost %}
+                                <tr>
+                                    <td class="fw-semibold text-dark">{{ item.item_name }}</td>
+                                    <td><span class="badge bg-danger">Lost</span></td>
+                                    <td><small class="text-muted">{{ item.category }}</small></td>
+                                    <td><small class="text-muted">{{ item.location }}</small></td>
+                                    <td><span class="badge status-{{ item.status.lower() }}">{{ item.status }}</span></td>
+                                    <td>
+                                        <a href="{{ url_for('lost.details', item_id=item.id) }}" class="btn btn-xs btn-outline-primary rounded-pill px-2 py-1 small">
+                                            View
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+
+                                {% for item in recent_found %}
+                                <tr>
+                                    <td class="fw-semibold text-dark">{{ item.item_name }}</td>
+                                    <td><span class="badge bg-primary">Found</span></td>
+                                    <td><small class="text-muted">{{ item.category }}</small></td>
+                                    <td><small class="text-muted">{{ item.location }}</small></td>
+                                    <td><span class="badge status-{{ item.status.lower().replace(' ', '-') }}">{{ item.status }}</span></td>
+                                    <td>
+                                        <a href="{{ url_for('found.details', item_id=item.id) }}" class="btn btn-xs btn-outline-primary rounded-pill px-2 py-1 small">
+                                            View
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4 text-muted small">
+                        You have not submitted any lost or found reports yet.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Right: Notifications & Campus Activity Column -->
+        <div class="col-lg-4">
+            <!-- Notifications Card -->
+            <div class="card border-0 rounded-4 shadow-sm bg-white p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold text-dark mb-0">
+                        <i class="bi bi-bell text-warning me-2"></i>Notifications
+                    </h5>
+                    <a href="{{ url_for('notifications.index') }}" class="small text-primary text-decoration-none">
+                        View All
+                    </a>
+                </div>
+
+                {% if notifications %}
+                    <div class="d-flex flex-column gap-2">
+                        {% for n in notifications %}
+                        <div class="p-3 rounded-3 border {% if not n.is_read %}bg-light border-primary{% else %}bg-white{% endif %}">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <span class="fw-bold small {% if not n.is_read %}text-primary{% else %}text-dark{% endif %}">
+                                    {{ n.title }}
+                                </span>
+                                <small class="text-muted" style="font-size: 0.7rem;">{{ n.created_at|time_ago }}</small>
+                            </div>
+                            <p class="small text-muted mb-2">{{ n.message }}</p>
+                            {% if n.link %}
+                            <a href="{{ n.link }}" class="btn btn-xs btn-outline-primary rounded-pill py-0 px-2 small">
+                                Open Link
+                            </a>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4 text-muted small">
+                        <i class="bi bi-bell-slash fs-2 opacity-50 mb-2 d-block"></i>
+                        No new notifications.
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Campus Stats Overview -->
+            <div class="card border-0 rounded-4 shadow-sm bg-white p-4">
+                <h5 class="fw-bold text-dark mb-3">
+                    <i class="bi bi-bar-chart-fill text-info me-2"></i>Campus Statistics
+                </h5>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between small text-muted mb-1">
+                        <span>Total Campus Lost Reports</span>
+                        <span class="fw-bold text-dark">{{ campus_lost_count }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between small text-muted mb-1">
+                        <span>Total Campus Found Items</span>
+                        <span class="fw-bold text-dark">{{ campus_found_count }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between small text-muted mb-1">
+                        <span>Successfully Recovered</span>
+                        <span class="fw-bold text-success">{{ campus_recovered_count }}</span>
+                    </div>
+                </div>
+                {% set rec_rate = (campus_recovered_count / campus_lost_count * 100)|round(1) if campus_lost_count > 0 else 0.0 %}
+                <div class="pt-2 border-top">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <small class="fw-bold text-dark">Overall Recovery Rate</small>
+                        <small class="fw-bold text-success">{{ rec_rate }}%</small>
+                    </div>
+                    <div class="progress progress-slim">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ rec_rate }}%;" aria-valuenow="{{ rec_rate }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

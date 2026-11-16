@@ -1,0 +1,269 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Dashboard - Campus Control Center{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Admin Header Banner -->
+    <div class="card border-0 rounded-4 shadow-sm text-white p-4 mb-4" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <span class="brand-icon-box" style="width: 52px; height: 52px; background: linear-gradient(135deg, #f59e0b, #d97706); font-size: 1.6rem;">
+                    <i class="bi bi-shield-shaded"></i>
+                </span>
+                <div>
+                    <h2 class="fw-bold mb-0">Campus Administrator Command Center</h2>
+                    <small class="text-white-50">Campus Safety & Security Office &bull; Moderator Portal</small>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('admin.students') }}" class="btn btn-outline-light btn-sm rounded-pill px-3">
+                    <i class="bi bi-people me-1"></i> Student Directory
+                </a>
+                <a href="{{ url_for('admin.matches') }}" class="btn btn-primary-custom btn-sm rounded-pill px-3">
+                    <i class="bi bi-stars me-1"></i> Match Analytics
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Metric Stat Boxes -->
+    <div class="row g-3 mb-4">
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="stat-box">
+                <div class="stat-icon primary"><i class="bi bi-people-fill"></i></div>
+                <div>
+                    <div class="stat-value">{{ stats.total_users }}</div>
+                    <div class="stat-label">Students</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="stat-box">
+                <div class="stat-icon warning"><i class="bi bi-question-circle-fill"></i></div>
+                <div>
+                    <div class="stat-value text-danger">{{ stats.total_lost }}</div>
+                    <div class="stat-label">Lost Reports</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="stat-box">
+                <div class="stat-icon primary"><i class="bi bi-box-seam-fill"></i></div>
+                <div>
+                    <div class="stat-value text-primary">{{ stats.total_found }}</div>
+                    <div class="stat-label">Found Items</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="stat-box">
+                <div class="stat-icon purple"><i class="bi bi-stars"></i></div>
+                <div>
+                    <div class="stat-value text-primary">{{ stats.total_matches }}</div>
+                    <div class="stat-label">AI Matches</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="stat-box">
+                <div class="stat-icon success"><i class="bi bi-check2-circle"></i></div>
+                <div>
+                    <div class="stat-value text-success">{{ stats.total_recovered }}</div>
+                    <div class="stat-label">Recovered</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="stat-box">
+                <div class="stat-icon success"><i class="bi bi-graph-up"></i></div>
+                <div>
+                    <div class="stat-value text-success">{{ stats.recovery_rate }}%</div>
+                    <div class="stat-label">Recovery Rate</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Moderation Section: Lost & Found Items -->
+    <div class="row g-4 mb-4">
+        <!-- Moderation: Lost Reports -->
+        <div class="col-lg-6">
+            <div class="card border-0 rounded-4 shadow-sm bg-white p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold text-dark mb-0">
+                        <i class="bi bi-exclamation-triangle text-danger me-2"></i>Lost Reports Moderation
+                    </h5>
+                    <span class="badge bg-danger rounded-pill">{{ stats.total_lost }} active</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table custom-table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Reporter</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in recent_lost %}
+                            <tr>
+                                <td>
+                                    <div class="fw-bold text-dark">{{ item.item_name }}</div>
+                                    <small class="text-muted">{{ item.location }}</small>
+                                </td>
+                                <td>
+                                    <small class="d-block fw-semibold">{{ item.reporter.name }}</small>
+                                    <small class="text-muted">{{ item.reporter.student_id }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge status-{{ item.status.lower() }}">{{ item.status }}</span>
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        <a href="{{ url_for('lost.details', item_id=item.id) }}" class="btn btn-xs btn-outline-primary rounded-pill px-2 py-1 small" title="View details">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <form method="POST" action="{{ url_for('admin.delete_lost_report', item_id=item.id) }}" onsubmit="return confirm('Moderator action: remove this post permanently?');">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                            <button type="submit" class="btn btn-xs btn-outline-danger rounded-pill px-2 py-1 small" title="Delete post">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Moderation: Found Reports -->
+        <div class="col-lg-6">
+            <div class="card border-0 rounded-4 shadow-sm bg-white p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold text-dark mb-0">
+                        <i class="bi bi-box-seam text-primary me-2"></i>Found Reports Moderation
+                    </h5>
+                    <span class="badge bg-primary rounded-pill">{{ stats.total_found }} recorded</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table custom-table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Reporter / Custody</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in recent_found %}
+                            <tr>
+                                <td>
+                                    <div class="fw-bold text-dark">{{ item.item_name }}</div>
+                                    <small class="text-muted">{{ item.location }}</small>
+                                </td>
+                                <td>
+                                    <small class="d-block fw-semibold">{{ item.reporter.name }}</small>
+                                    <small class="text-muted">{{ item.storage_location or 'With Finder' }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge status-{{ item.status.lower().replace(' ', '-') }}">{{ item.status }}</span>
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        <a href="{{ url_for('found.details', item_id=item.id) }}" class="btn btn-xs btn-outline-primary rounded-pill px-2 py-1 small" title="View details">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <form method="POST" action="{{ url_for('admin.delete_found_report', item_id=item.id) }}" onsubmit="return confirm('Moderator action: remove this post permanently?');">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                            <button type="submit" class="btn btn-xs btn-outline-danger rounded-pill px-2 py-1 small" title="Delete post">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Matches & Student Signups -->
+    <div class="row g-4">
+        <!-- High Confidence Matches -->
+        <div class="col-lg-8">
+            <div class="card border-0 rounded-4 shadow-sm bg-white p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold text-dark mb-0">
+                        <i class="bi bi-stars text-primary me-2"></i>Top AI Match Pairings Across Campus
+                    </h5>
+                    <a href="{{ url_for('admin.matches') }}" class="btn btn-outline-primary btn-sm rounded-pill">
+                        Inspect All Matches
+                    </a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table custom-table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Score</th>
+                                <th>Lost Item</th>
+                                <th>Found Item</th>
+                                <th>Explanation</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for m in recent_matches %}
+                            <tr>
+                                <td>
+                                    <span class="badge {% if m.similarity_score >= 70 %}bg-success{% elif m.similarity_score >= 45 %}bg-primary{% else %}bg-warning text-dark{% endif %} rounded-pill px-2 py-1">
+                                        {{ m.similarity_score|round|int }}%
+                                    </span>
+                                </td>
+                                <td class="fw-semibold text-dark">{{ m.lost_item.item_name }}</td>
+                                <td class="fw-semibold text-primary">{{ m.found_item.item_name }}</td>
+                                <td class="small text-muted">{{ m.explanation[:60] }}...</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Registered Students -->
+        <div class="col-lg-4">
+            <div class="card border-0 rounded-4 shadow-sm bg-white p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold text-dark mb-0">
+                        <i class="bi bi-person-check text-success me-2"></i>Recent Students
+                    </h5>
+                    <a href="{{ url_for('admin.students') }}" class="small text-primary text-decoration-none">
+                        Manage
+                    </a>
+                </div>
+                <div class="d-flex flex-column gap-3">
+                    {% for u in recent_users %}
+                    <div class="d-flex align-items-center justify-content-between p-2 rounded-3 bg-light border">
+                        <div>
+                            <div class="fw-bold small text-dark">{{ u.name }}</div>
+                            <small class="text-muted">{{ u.student_id }} &bull; {{ u.department.split(' ')[0] }}</small>
+                        </div>
+                        <span class="badge {% if u.is_active %}bg-success{% else %}bg-secondary{% endif %} rounded-pill">
+                            {{ 'Active' if u.is_active else 'Suspended' }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
