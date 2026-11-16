@@ -254,3 +254,5 @@ OK
 - **Role-Based Authorization**: `@admin_required` and `@login_required` route decorators prevent unauthorized students from tampering with moderation endpoints.
 - **Safe File Uploads**: Image extensions restricted to `.png`, `.jpg`, `.jpeg`, `.webp`, with randomized UUID renaming to block path traversal and overwriting attacks.
 - **SQL Injection Prevention**: SQLAlchemy parameterized queries across all database operations.
+
+Deployment configuration updated.
