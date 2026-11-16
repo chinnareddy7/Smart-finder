@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block title %}Browse Lost Items - Smart Lost & Found{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <h2 class="fw-bold text-dark mb-1"><i class="bi bi-question-circle text-danger me-2"></i>Campus Lost Belongings</h2>
+            <p class="text-muted small mb-0">Search through active lost reports or filter by campus zone and item category</p>
+        </div>
+        <a href="{{ url_for('lost.report') }}" class="btn btn-danger rounded-pill px-4 py-2 shadow-sm">
+            <i class="bi bi-plus-circle me-1"></i> Report Lost Item
+        </a>
+    </div>
+
+    <!-- Search & Filter Bar -->
+    <div class="card border-0 rounded-4 shadow-sm bg-white p-3 mb-4">
+        <form method="GET" action="{{ url_for('lost.browse') }}" class="row g-2 align-items-center">
+            <div class="col-lg-4 col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" class="form-control border-start-0" name="q" value="{{ search_query }}" placeholder="Search by name, brand, details...">
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-3">
+                <select class="form-select" name="category">
+                    <option value="All">All Categories</option>
+                    {% for cat in ITEM_CATEGORIES %}
+                    <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-lg-3 col-md-3">
+                <select class="form-select" name="location">
+                    <option value="All">All Locations</option>
+                    {% for loc in CAMPUS_LOCATIONS %}
+                    <option value="{{ loc }}" {% if selected_location == loc %}selected{% endif %}>{{ loc }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-lg-2 col-md-12 d-flex gap-2">
+                <button type="submit" class="btn btn-primary-custom flex-grow-1 rounded-pill">
+                    Filter
+                </button>
+                <a href="{{ url_for('lost.browse') }}" class="btn btn-outline-secondary rounded-pill px-3" title="Reset Filters">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Items Grid -->
+    <div class="row g-4">
+        {% if items %}
+            {% for item in items %}
+            <div class="col-lg-4 col-md-6">
+                <div class="card saas-card h-100 card-top-accent-navy">
+                    <div class="item-img-container">
+                        {% if item.image_filename %}
+                            <img src="{{ url_for('static', filename='uploads/' + item.image_filename) }}" alt="{{ item.item_name }}">
+                        {% else %}
+                            <div class="text-muted text-center p-3">
+                                <i class="bi bi-image fs-1 opacity-50"></i>
+                                <div class="small">No Photo Provided</div>
+                            </div>
+                        {% endif %}
+                        <span class="item-status-pill status-{{ item.status.lower() }}">{{ item.status }}</span>
+                    </div>
+                    <div class="card-body p-4 d-flex flex-column">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="category-tag"><i class="bi bi-tag-fill"></i> {{ item.category }}</span>
+                            <small class="text-muted">{{ item.lost_date|format_date }}</small>
+                        </div>
+                        <h5 class="fw-bold mb-2">
+                            <a href="{{ url_for('lost.details', item_id=item.id) }}" class="text-dark text-decoration-none hover-primary">
+                                {{ item.item_name }}
+                            </a>
+                        </h5>
+                        <p class="text-muted small mb-3 flex-grow-1">
+                            {{ item.description[:120] }}{% if item.description|length > 120 %}...{% endif %}
+                        </p>
+                        
+                        <div class="border-top pt-3 d-flex justify-content-between align-items-center">
+                            <span class="location-tag"><i class="bi bi-geo-alt-fill text-danger"></i> {{ item.location }}</span>
+                            <a href="{{ url_for('lost.details', item_id=item.id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                View Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12 text-center py-5">
+                <div class="card border-0 rounded-4 shadow-sm bg-white p-5 max-w-500 mx-auto">
+                    <i class="bi bi-search fs-1 text-muted opacity-50 mb-3 d-block"></i>
+                    <h5 class="fw-bold text-dark">No Lost Items Found</h5>
+                    <p class="text-muted small mb-4">No lost item reports matched your search filters. Try adjusting your search term or category selection.</p>
+                    <a href="{{ url_for('lost.browse') }}" class="btn btn-outline-primary rounded-pill btn-sm mx-auto px-4">
+                        Clear Filters
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

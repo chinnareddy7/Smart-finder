@@ -1,0 +1,320 @@
+{% extends 'base.html' %}
+
+{% block title %}My Reports & Inquiries - Smart Lost & Found{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <h2 class="fw-bold text-dark mb-1"><i class="bi bi-collection text-primary me-2"></i>My Campus Reports & Inquiries</h2>
+            <p class="text-muted small mb-0">Manage all your lost and found submissions, monitor AI matches, and process claims</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('lost.report') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3">
+                <i class="bi bi-plus-circle me-1"></i> Report Lost
+            </a>
+            <a href="{{ url_for('found.report') }}" class="btn btn-primary-custom btn-sm rounded-pill px-3">
+                <i class="bi bi-plus-circle me-1"></i> Report Found
+            </a>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-pills mb-4 bg-white p-2 rounded-4 shadow-sm border" id="reportsTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link rounded-pill fw-semibold {% if tab == 'lost' %}active{% endif %}" id="lost-tab" data-bs-toggle="pill" data-bs-target="#lost-pane" type="button" role="tab" aria-controls="lost-pane" aria-selected="true">
+                <i class="bi bi-question-circle me-1"></i> My Lost Reports ({{ my_lost_items|length }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link rounded-pill fw-semibold {% if tab == 'found' %}active{% endif %}" id="found-tab" data-bs-toggle="pill" data-bs-target="#found-pane" type="button" role="tab" aria-controls="found-pane" aria-selected="false">
+                <i class="bi bi-box-seam me-1"></i> My Found Reports ({{ my_found_items|length }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link rounded-pill fw-semibold position-relative {% if tab == 'incoming' %}active{% endif %}" id="incoming-tab" data-bs-toggle="pill" data-bs-target="#incoming-pane" type="button" role="tab" aria-controls="incoming-pane" aria-selected="false">
+                <i class="bi bi-inbox me-1"></i> Incoming Claim Requests ({{ incoming_requests|length }})
+                {% set pending_count = incoming_requests|selectattr('status', 'equalto', 'Pending')|list|length %}
+                {% if pending_count > 0 %}
+                <span class="badge bg-danger rounded-pill ms-1">{{ pending_count }}</span>
+                {% endif %}
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link rounded-pill fw-semibold {% if tab == 'outgoing' %}active{% endif %}" id="outgoing-tab" data-bs-toggle="pill" data-bs-target="#outgoing-pane" type="button" role="tab" aria-controls="outgoing-pane" aria-selected="false">
+                <i class="bi bi-send me-1"></i> My Sent Claims ({{ outgoing_requests|length }})
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="reportsTabContent">
+        <!-- 1. MY LOST ITEMS TAB -->
+        <div class="tab-pane fade {% if tab == 'lost' %}show active{% endif %}" id="lost-pane" role="tabpanel" aria-labelledby="lost-tab">
+            {% if my_lost_items %}
+                <div class="row g-4">
+                    {% for item in my_lost_items %}
+                    <div class="col-lg-6">
+                        <div class="card border-0 rounded-4 shadow-sm bg-white p-4 h-100 position-relative">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="category-tag"><i class="bi bi-tag-fill"></i> {{ item.category }}</span>
+                                <span class="badge status-{{ item.status.lower() }}">{{ item.status }}</span>
+                            </div>
+                            <h4 class="fw-bold text-dark mb-1">
+                                <a href="{{ url_for('lost.details', item_id=item.id) }}" class="text-dark text-decoration-none hover-primary">
+                                    {{ item.item_name }}
+                                </a>
+                            </h4>
+                            <div class="small text-muted mb-3">
+                                <i class="bi bi-geo-alt-fill text-danger me-1"></i>{{ item.location }} &bull; Lost {{ item.lost_date|format_date }}
+                            </div>
+                            <p class="text-secondary small mb-3 flex-grow-1">{{ item.description[:140] }}...</p>
+
+                            <!-- AI Match count badge -->
+                            {% set match_count = item.matches.count() %}
+                            <div class="p-2 rounded-3 bg-light border mb-3 d-flex justify-content-between align-items-center">
+                                <span class="small text-muted">
+                                    <i class="bi bi-stars text-primary me-1"></i> AI Suggestions:
+                                </span>
+                                <span class="badge {% if match_count > 0 %}bg-primary{% else %}bg-secondary{% endif %} rounded-pill">
+                                    {{ match_count }} potential match(es)
+                                </span>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="border-top pt-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                <div class="d-flex gap-2">
+                                    <a href="{{ url_for('lost.details', item_id=item.id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                        View Details
+                                    </a>
+                                    <a href="{{ url_for('lost.edit', item_id=item.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                                        Edit
+                                    </a>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    {% if item.status != 'Recovered' %}
+                                    <form method="POST" action="{{ url_for('lost.mark_recovered', item_id=item.id) }}" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                        <button type="submit" class="btn btn-sm btn-success rounded-pill px-3">
+                                            <i class="bi bi-check2"></i> Mark Recovered
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                    <form method="POST" action="{{ url_for('lost.delete', item_id=item.id) }}" class="d-inline" onsubmit="return confirm('Delete this lost report?');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="card border-0 rounded-4 shadow-sm bg-white p-5 text-center">
+                    <i class="bi bi-question-circle fs-1 text-muted opacity-50 mb-3 d-block"></i>
+                    <h5 class="fw-bold text-dark">No Lost Reports Filed</h5>
+                    <p class="text-muted small mb-4">You have not submitted any missing item reports yet.</p>
+                    <a href="{{ url_for('lost.report') }}" class="btn btn-danger rounded-pill btn-sm mx-auto px-4">
+                        Report Lost Property
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- 2. MY FOUND ITEMS TAB -->
+        <div class="tab-pane fade {% if tab == 'found' %}show active{% endif %}" id="found-pane" role="tabpanel" aria-labelledby="found-tab">
+            {% if my_found_items %}
+                <div class="row g-4">
+                    {% for item in my_found_items %}
+                    <div class="col-lg-6">
+                        <div class="card border-0 rounded-4 shadow-sm bg-white p-4 h-100 position-relative">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="category-tag"><i class="bi bi-tag-fill"></i> {{ item.category }}</span>
+                                <span class="badge status-{{ item.status.lower().replace(' ', '-') }}">{{ item.status }}</span>
+                            </div>
+                            <h4 class="fw-bold text-dark mb-1">
+                                <a href="{{ url_for('found.details', item_id=item.id) }}" class="text-dark text-decoration-none hover-primary">
+                                    {{ item.item_name }}
+                                </a>
+                            </h4>
+                            <div class="small text-muted mb-2">
+                                <i class="bi bi-geo-alt-fill text-primary me-1"></i>{{ item.location }} &bull; Found {{ item.found_date|format_date }}
+                            </div>
+                            <div class="small text-muted mb-3 bg-light p-2 rounded-2 border">
+                                <i class="bi bi-safe2 text-primary me-1"></i>Custody: {{ item.storage_location or 'With Finder' }}
+                            </div>
+                            <p class="text-secondary small mb-3 flex-grow-1">{{ item.description[:140] }}...</p>
+
+                            <!-- Actions -->
+                            <div class="border-top pt-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                <div class="d-flex gap-2">
+                                    <a href="{{ url_for('found.details', item_id=item.id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                        View Details
+                                    </a>
+                                    <a href="{{ url_for('found.edit', item_id=item.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                                        Edit
+                                    </a>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    {% if item.status != 'Claimed' %}
+                                    <form method="POST" action="{{ url_for('found.mark_claimed', item_id=item.id) }}" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                        <input type="hidden" name="status" value="Claimed">
+                                        <button type="submit" class="btn btn-sm btn-success rounded-pill px-3">
+                                            <i class="bi bi-check2"></i> Mark Claimed
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                    <form method="POST" action="{{ url_for('found.delete', item_id=item.id) }}" class="d-inline" onsubmit="return confirm('Delete this found report?');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="card border-0 rounded-4 shadow-sm bg-white p-5 text-center">
+                    <i class="bi bi-box-seam fs-1 text-muted opacity-50 mb-3 d-block"></i>
+                    <h5 class="fw-bold text-dark">No Found Reports Registered</h5>
+                    <p class="text-muted small mb-4">You have not reported any found property yet.</p>
+                    <a href="{{ url_for('found.report') }}" class="btn btn-primary-custom rounded-pill btn-sm mx-auto px-4">
+                        Report Found Property
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- 3. INCOMING CLAIM REQUESTS TAB -->
+        <div class="tab-pane fade {% if tab == 'incoming' %}show active{% endif %}" id="incoming-pane" role="tabpanel" aria-labelledby="incoming-tab">
+            {% if incoming_requests %}
+                <div class="d-flex flex-column gap-3">
+                    {% for req in incoming_requests %}
+                    <div class="card border-0 rounded-4 shadow-sm bg-white p-4">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <span class="badge {% if req.status == 'Pending' %}bg-warning text-dark{% elif req.status == 'Accepted' %}bg-success{% else %}bg-danger{% endif %} rounded-pill px-3 py-1 mb-1">
+                                    {{ req.status }}
+                                </span>
+                                <h5 class="fw-bold text-dark mb-0">
+                                    From: {{ req.sender.name }} ({{ req.sender.department }})
+                                </h5>
+                                <small class="text-muted">Regarding: <strong>{{ req.lost_item.item_name if req.lost_item else req.found_item.item_name }}</strong></small>
+                            </div>
+                            <small class="text-muted">{{ req.created_at|format_date }}</small>
+                        </div>
+
+                        <div class="p-3 bg-light rounded-3 my-3 border">
+                            <div class="small fw-bold text-dark mb-1">Claimant Verification Message:</div>
+                            <p class="small text-secondary mb-0">"{{ req.message }}"</p>
+                        </div>
+
+                        {% if req.status == 'Accepted' %}
+                            <div class="p-3 bg-success-subtle text-success rounded-3 border border-success small mb-3">
+                                <i class="bi bi-check-circle-fill me-1"></i> You approved this request! Both students can now coordinate directly.
+                                <div class="mt-2 text-dark">
+                                    <strong>Claimant Phone:</strong> {{ req.sender.phone }} &bull; 
+                                    <strong>Email:</strong> {{ req.sender.email }} &bull; 
+                                    <strong>Student ID:</strong> {{ req.sender.student_id }}
+                                </div>
+                            </div>
+                        {% elif req.status == 'Pending' %}
+                            <div class="border-top pt-3 d-flex gap-2">
+                                <form method="POST" action="{{ url_for('requests.respond_request', req_id=req.id) }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    <input type="hidden" name="action" value="accept">
+                                    <button type="submit" class="btn btn-success btn-sm rounded-pill px-4">
+                                        <i class="bi bi-check-lg me-1"></i> Accept Claim & Release Contact
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('requests.respond_request', req_id=req.id) }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    <input type="hidden" name="action" value="reject">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-4">
+                                        <i class="bi bi-x-lg me-1"></i> Decline
+                                    </button>
+                                </form>
+                            </div>
+                        {% else %}
+                            <div class="text-muted small">
+                                <i class="bi bi-x-circle me-1"></i> Request declined.
+                            </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="card border-0 rounded-4 shadow-sm bg-white p-5 text-center">
+                    <i class="bi bi-inbox fs-1 text-muted opacity-50 mb-3 d-block"></i>
+                    <h5 class="fw-bold text-dark">No Incoming Inquiries</h5>
+                    <p class="text-muted small mb-0">When other students send a claim or contact request for your reports, they will show up here.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- 4. OUTGOING CLAIMS TAB -->
+        <div class="tab-pane fade {% if tab == 'outgoing' %}show active{% endif %}" id="outgoing-pane" role="tabpanel" aria-labelledby="outgoing-tab">
+            {% if outgoing_requests %}
+                <div class="d-flex flex-column gap-3">
+                    {% for req in outgoing_requests %}
+                    <div class="card border-0 rounded-4 shadow-sm bg-white p-4">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <span class="badge {% if req.status == 'Pending' %}bg-warning text-dark{% elif req.status == 'Accepted' %}bg-success{% else %}bg-danger{% endif %} rounded-pill px-3 py-1 mb-1">
+                                    {{ req.status }}
+                                </span>
+                                <h5 class="fw-bold text-dark mb-0">
+                                    Request to: {{ req.receiver.name }}
+                                </h5>
+                                <small class="text-muted">Regarding item: <strong>{{ req.lost_item.item_name if req.lost_item else req.found_item.item_name }}</strong></small>
+                            </div>
+                            <small class="text-muted">{{ req.created_at|format_date }}</small>
+                        </div>
+
+                        <div class="p-3 bg-light rounded-3 my-2 border">
+                            <div class="small fw-bold text-dark mb-1">Your Submitted Proof:</div>
+                            <p class="small text-secondary mb-0">"{{ req.message }}"</p>
+                        </div>
+
+                        {% if req.status == 'Accepted' %}
+                            <div class="p-3 bg-success-subtle text-success rounded-3 border border-success small mt-2">
+                                <div class="fw-bold mb-1"><i class="bi bi-unlock-fill me-1"></i> Request Accepted! Reporter's Direct Contact Details:</div>
+                                <div class="text-dark">
+                                    <strong>Phone:</strong> <a href="tel:{{ req.receiver.phone }}" class="text-primary text-decoration-none">{{ req.receiver.phone }}</a> &bull;
+                                    <strong>Email:</strong> <a href="mailto:{{ req.receiver.email }}" class="text-primary text-decoration-none">{{ req.receiver.email }}</a> &bull;
+                                    <strong>Roll ID:</strong> <code>{{ req.receiver.student_id }}</code>
+                                </div>
+                                {% if req.response_note %}
+                                <div class="mt-2 text-muted small"><strong>Reporter Note:</strong> "{{ req.response_note }}"</div>
+                                {% endif %}
+                            </div>
+                        {% elif req.status == 'Pending' %}
+                            <div class="text-warning-emphasis small mt-2">
+                                <i class="bi bi-clock-history me-1"></i> Awaiting reporter's review and verification.
+                            </div>
+                        {% else %}
+                            <div class="text-danger small mt-2">
+                                <i class="bi bi-x-circle me-1"></i> Request declined. Note: {{ req.response_note or 'Claim unverified.' }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="card border-0 rounded-4 shadow-sm bg-white p-5 text-center">
+                    <i class="bi bi-send fs-1 text-muted opacity-50 mb-3 d-block"></i>
+                    <h5 class="fw-bold text-dark">No Outgoing Claims Sent</h5>
+                    <p class="text-muted small mb-0">You have not submitted claims or inquiry requests on other students' reports yet.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

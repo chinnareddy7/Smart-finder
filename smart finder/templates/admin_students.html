@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Students - Admin Console{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb small mb-1">
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}" class="text-decoration-none">Admin Dashboard</a></li>
+                    <li class="breadcrumb-item active">Students</li>
+                </ol>
+            </nav>
+            <h2 class="fw-bold text-dark mb-0"><i class="bi bi-people-fill text-primary me-2"></i>Student Accounts Directory</h2>
+        </div>
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+            <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+        </a>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="card border-0 rounded-4 shadow-sm bg-white p-3 mb-4">
+        <form method="GET" action="{{ url_for('admin.students') }}" class="row g-2 align-items-center">
+            <div class="col-md-9">
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" class="form-control border-start-0" name="q" value="{{ search_q }}" placeholder="Search students by Roll ID, name, email, or department...">
+                </div>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary-custom flex-grow-1 rounded-pill">
+                    Search
+                </button>
+                <a href="{{ url_for('admin.students') }}" class="btn btn-outline-secondary rounded-pill px-3">
+                    Reset
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Students Table -->
+    <div class="card border-0 rounded-4 shadow-sm bg-white p-4">
+        <div class="table-responsive">
+            <table class="table custom-table align-middle">
+                <thead>
+                    <tr>
+                        <th>Roll / Student ID</th>
+                        <th>Student Name</th>
+                        <th>Department</th>
+                        <th>Email & Phone</th>
+                        <th>Reports (L / F)</th>
+                        <th>Account Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if students %}
+                        {% for s in students %}
+                        <tr>
+                            <td><code>{{ s.student_id }}</code></td>
+                            <td class="fw-bold text-dark">{{ s.name }}</td>
+                            <td><small class="text-muted">{{ s.department }}</small></td>
+                            <td>
+                                <div class="small">{{ s.email }}</div>
+                                <small class="text-muted">{{ s.phone }}</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-danger-subtle text-danger">{{ s.lost_items.count() }} Lost</span>
+                                <span class="badge bg-primary-subtle text-primary">{{ s.found_items.count() }} Found</span>
+                            </td>
+                            <td>
+                                <span class="badge {% if s.is_active %}bg-success{% else %}bg-danger{% endif %} rounded-pill px-3 py-1">
+                                    {{ 'Active' if s.is_active else 'Suspended' }}
+                                </span>
+                            </td>
+                            <td>
+                                <form method="POST" action="{{ url_for('admin.toggle_student_status', user_id=s.id) }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    <button type="submit" class="btn btn-xs {% if s.is_active %}btn-outline-danger{% else %}btn-outline-success{% endif %} rounded-pill px-3 py-1 small">
+                                        {{ 'Suspend' if s.is_active else 'Activate' }}
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">
+                                No student accounts matched your query.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

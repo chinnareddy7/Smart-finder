@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+
+{% block title %}Report Found Item - Smart Lost & Found{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="form-card card-top-accent-blue">
+                <div class="d-flex align-items-center gap-3 mb-4 border-bottom pb-3">
+                    <span class="brand-icon-box" style="width: 48px; height: 48px; background: linear-gradient(135deg, #0284c7, #0ea5e9); font-size: 1.4rem;">
+                        <i class="bi bi-box-seam-fill"></i>
+                    </span>
+                    <div>
+                        <h3 class="fw-bold text-dark mb-0">Report a Found Item</h3>
+                        <p class="text-muted small mb-0">Help reunite a fellow campus student or professor with their missing belonging</p>
+                    </div>
+                </div>
+
+                <form method="POST" action="{{ url_for('found.report') }}" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+                    <!-- Item Name & Category -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="item_name" class="form-label">Item Title <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="item_name" name="item_name" 
+                                   value="{{ form_data.item_name if form_data else '' }}" 
+                                   placeholder="e.g. Casio fx-991EX Scientific Calculator" required>
+                            <small class="text-muted">Mention brand, color, or distinctive model.</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="category" class="form-label">Category <span class="text-danger">*</span></label>
+                            <select class="form-select" id="category" name="category" required>
+                                <option value="">Select Category...</option>
+                                {% for cat in ITEM_CATEGORIES %}
+                                <option value="{{ cat }}" {% if form_data and form_data.category == cat %}selected{% endif %}>{{ cat }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Found Date & Location -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="found_date" class="form-label">Date Found <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="found_date" name="found_date" 
+                                   value="{{ form_data.found_date if form_data else '' }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="location" class="form-label">Campus Location Found <span class="text-danger">*</span></label>
+                            <select class="form-select" id="location" name="location" required>
+                                <option value="">Select Location...</option>
+                                {% for loc in CAMPUS_LOCATIONS %}
+                                <option value="{{ loc }}" {% if form_data and form_data.location == loc %}selected{% endif %}>{{ loc }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Storage / Handover Location -->
+                    <div class="mb-3">
+                        <label for="storage_location" class="form-label">Current Custody / Storage Location</label>
+                        <input type="text" class="form-control" id="storage_location" name="storage_location" 
+                               value="{{ form_data.storage_location if form_data else '' }}" 
+                               placeholder="e.g. Security Cabin Gate 1, Dean Student Welfare Office, or With Finder">
+                        <small class="text-muted">Where is the item currently kept so the student knows where to claim it?</small>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Detailed Description <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="description" name="description" rows="4" 
+                                  placeholder="Provide descriptive details (condition, color, marks, where on the desk/floor it was spotted)..." required>{{ form_data.description if form_data else '' }}</textarea>
+                    </div>
+
+                    <!-- Additional Details -->
+                    <div class="mb-4">
+                        <label for="additional_details" class="form-label">Additional Observations / Clues (Optional)</label>
+                        <input type="text" class="form-control" id="additional_details" name="additional_details" 
+                               value="{{ form_data.additional_details if form_data else '' }}" 
+                               placeholder="e.g. Left in front row after lecture, contains keys, battery low">
+                    </div>
+
+                    <!-- Image Upload with Live Preview -->
+                    <div class="mb-4">
+                        <label class="form-label">Item Photo (Recommended)</label>
+                        <label for="imageUploadInput" class="upload-dropzone d-block">
+                            <div id="uploadPlaceholder">
+                                <i class="bi bi-camera text-primary fs-1 mb-2 d-block"></i>
+                                <span class="fw-semibold text-dark">Click to select or drop item photo here</span>
+                                <div class="small text-muted">Supports JPG, PNG, WEBP (Max: 5MB)</div>
+                            </div>
+                            <div id="imagePreviewContainer" class="d-none mt-2">
+                                <img id="imagePreview" src="#" alt="Preview" class="img-fluid rounded-3 border" style="max-height: 200px;">
+                                <div class="small text-primary mt-1">Image selected. Click to change.</div>
+                            </div>
+                        </label>
+                        <input type="file" class="d-none" id="imageUploadInput" name="image" accept="image/png, image/jpeg, image/webp">
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                        <a href="{{ url_for('student.dashboard') }}" class="btn btn-outline-secondary rounded-pill px-4">
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary-custom rounded-pill px-5 py-2">
+                            <i class="bi bi-cpu-fill me-1"></i> Register Found Item & Run AI Search
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

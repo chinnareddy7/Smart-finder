@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+
+{% block title %}AI Matching Center - Smart Lost & Found{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="card border-0 rounded-4 shadow-sm text-white p-4 mb-4" style="background: linear-gradient(135deg, #0f2444 0%, #0369a1 100%);">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <div class="d-flex align-items-center gap-3 mb-2">
+                    <span class="brand-icon-box" style="width: 48px; height: 48px; background: linear-gradient(135deg, #06b6d4, #38bdf8); font-size: 1.5rem;">
+                        <i class="bi bi-cpu-fill"></i>
+                    </span>
+                    <div>
+                        <h2 class="fw-bold mb-0">AI Matching Engine</h2>
+                        <small class="text-white-50">Natural Language Preprocessing &bull; Scikit-learn TF-IDF &bull; Cosine Similarity</small>
+                    </div>
+                </div>
+                <p class="text-white-50 small mb-0">
+                    The AI engine automatically vectorizes text descriptions, strips domain stopwords, stems word variations, and computes multi-factor mathematical similarity scores against location and category matrices.
+                </p>
+            </div>
+            <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+                <form method="POST" action="{{ url_for('matches.recalculate') }}" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="btn btn-light text-primary fw-bold rounded-pill px-4 py-2 shadow-sm">
+                        <i class="bi bi-arrow-repeat me-1"></i> Recalculate Matches
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tier Filter Tabs -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="btn-group rounded-pill bg-white p-1 shadow-sm border" role="group">
+            <a href="{{ url_for('matches.index', tier='all') }}" class="btn btn-sm rounded-pill px-3 fw-semibold {% if filter_tier == 'all' %}btn-primary-custom{% else %}btn-link text-dark text-decoration-none{% endif %}">
+                All Matches ({{ matches|length }})
+            </a>
+            <a href="{{ url_for('matches.index', tier='high') }}" class="btn btn-sm rounded-pill px-3 fw-semibold {% if filter_tier == 'high' %}btn-primary-custom{% else %}btn-link text-dark text-decoration-none{% endif %}">
+                High Confidence (&ge; 70%)
+            </a>
+            <a href="{{ url_for('matches.index', tier='moderate') }}" class="btn btn-sm rounded-pill px-3 fw-semibold {% if filter_tier == 'moderate' %}btn-primary-custom{% else %}btn-link text-dark text-decoration-none{% endif %}">
+                Moderate (45% - 69%)
+            </a>
+        </div>
+    </div>
+
+    <!-- Match Cards List -->
+    <div class="row g-4">
+        {% if matches %}
+            {% for match in matches %}
+            <div class="col-12">
+                <div class="card border-0 rounded-4 shadow-sm bg-white p-4">
+                    <!-- Top Bar: Similarity Score + Status -->
+                    <div class="d-flex flex-wrap justify-content-between align-items-center border-bottom pb-3 mb-3 gap-2">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="score-badge-circle {% if match.similarity_score >= 70 %}score-badge-high{% elif match.similarity_score >= 45 %}score-badge-mid{% else %}score-badge-fair{% endif %}">
+                                <span class="score-number">{{ match.similarity_score|round|int }}%</span>
+                                <span class="score-text">Match</span>
+                            </div>
+                            <div>
+                                <span class="badge {% if match.similarity_score >= 70 %}bg-success-subtle text-success{% elif match.similarity_score >= 45 %}bg-primary-subtle text-primary{% else %}bg-warning-subtle text-warning{% endif %} fw-bold px-3 py-1 rounded-pill mb-1">
+                                    {% if match.similarity_score >= 70 %}High Probability Match{% elif match.similarity_score >= 45 %}Moderate Probability Match{% else %}Fair Similarity Match{% endif %}
+                                </span>
+                                <div class="text-muted small">
+                                    Computed by TF-IDF &bull; {{ match.created_at|format_date }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Mathematical Score Breakdown Badges -->
+                        <div class="d-flex flex-wrap gap-2">
+                            <span class="badge bg-light text-dark border px-2 py-2">
+                                <i class="bi bi-file-earmark-text text-primary me-1"></i> Text Similarity: <strong>{{ match.text_score }}%</strong>
+                            </span>
+                            <span class="badge {% if match.category_match %}bg-success-subtle text-success border border-success-subtle{% else %}bg-secondary-subtle text-secondary border{% endif %} px-2 py-2">
+                                <i class="bi bi-tag-fill me-1"></i> Category Match: <strong>{{ '100% (Exact)' if match.category_match else match.category_score ~ '%' }}</strong>
+                            </span>
+                            <span class="badge {% if match.location_match %}bg-success-subtle text-success border border-success-subtle{% else %}bg-secondary-subtle text-secondary border{% endif %} px-2 py-2">
+                                <i class="bi bi-geo-alt-fill me-1"></i> Location Match: <strong>{{ '100% (Identical)' if match.location_match else match.location_score ~ '%' }}</strong>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- AI Explanation Quote -->
+                    <div class="p-3 rounded-3 bg-light border mb-4">
+                        <div class="d-flex align-items-start gap-2">
+                            <i class="bi bi-robot text-primary fs-5 mt-1"></i>
+                            <div>
+                                <strong class="text-dark small d-block">AI Decision Explanation:</strong>
+                                <span class="text-secondary small">{{ match.explanation }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Side-by-side Item Comparison -->
+                    <div class="row g-4 align-items-stretch">
+                        <!-- Lost Item Left -->
+                        <div class="col-md-6">
+                            <div class="p-3 rounded-3 border bg-light h-100 d-flex flex-column">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="badge bg-danger">Lost Item</span>
+                                    <small class="text-muted">{{ match.lost_item.lost_date|format_date }}</small>
+                                </div>
+                                <h5 class="fw-bold text-dark mb-1">
+                                    <a href="{{ url_for('lost.details', item_id=match.lost_item.id) }}" class="text-dark text-decoration-none">
+                                        {{ match.lost_item.item_name }}
+                                    </a>
+                                </h5>
+                                <div class="small text-muted mb-2">
+                                    <i class="bi bi-geo-alt text-danger me-1"></i> {{ match.lost_item.location }} &bull; <i class="bi bi-tag text-primary me-1"></i> {{ match.lost_item.category }}
+                                </div>
+                                <p class="small text-secondary flex-grow-1 mb-3">
+                                    "{{ match.lost_item.description }}"
+                                </p>
+                                <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                                    <small class="text-muted">Reported by: {{ match.lost_item.reporter.name }}</small>
+                                    <a href="{{ url_for('lost.details', item_id=match.lost_item.id) }}" class="btn btn-xs btn-outline-danger rounded-pill px-3 py-1 small">
+                                        View Lost Details
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Found Item Right -->
+                        <div class="col-md-6">
+                            <div class="p-3 rounded-3 border bg-light h-100 d-flex flex-column">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="badge bg-primary">Found Item</span>
+                                    <small class="text-muted">{{ match.found_item.found_date|format_date }}</small>
+                                </div>
+                                <h5 class="fw-bold text-dark mb-1">
+                                    <a href="{{ url_for('found.details', item_id=match.found_item.id) }}" class="text-dark text-decoration-none">
+                                        {{ match.found_item.item_name }}
+                                    </a>
+                                </h5>
+                                <div class="small text-muted mb-2">
+                                    <i class="bi bi-geo-alt text-primary me-1"></i> {{ match.found_item.location }} &bull; <i class="bi bi-tag text-primary me-1"></i> {{ match.found_item.category }}
+                                </div>
+                                <p class="small text-secondary flex-grow-1 mb-3">
+                                    "{{ match.found_item.description }}"
+                                </p>
+                                <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                                    <small class="text-muted"><i class="bi bi-safe2 text-primary me-1"></i> Custody: {{ match.found_item.storage_location or 'With Finder' }}</small>
+                                    <a href="{{ url_for('found.details', item_id=match.found_item.id) }}" class="btn btn-xs btn-primary-custom rounded-pill px-3 py-1 small">
+                                        Claim / Inspect
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer actions on match -->
+                    <div class="d-flex justify-content-end align-items-center gap-2 mt-3 pt-3 border-top">
+                        <form method="POST" action="{{ url_for('matches.dismiss', match_id=match.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <button type="submit" class="btn btn-sm btn-link text-muted text-decoration-none">
+                                <i class="bi bi-x-circle me-1"></i> Dismiss this recommendation
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12 text-center py-5">
+                <div class="card border-0 rounded-4 shadow-sm bg-white p-5 max-w-600 mx-auto">
+                    <i class="bi bi-stars fs-1 text-primary opacity-50 mb-3 d-block"></i>
+                    <h4 class="fw-bold text-dark">No Active AI Matches in this Filter</h4>
+                    <p class="text-muted small mb-4">
+                        Our Scikit-learn TF-IDF engine runs automatically whenever lost or found reports are submitted. You can trigger a global recalculation anytime.
+                    </p>
+                    <form method="POST" action="{{ url_for('matches.recalculate') }}" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <button type="submit" class="btn btn-primary-custom rounded-pill px-4">
+                            <i class="bi bi-arrow-repeat me-1"></i> Run Recalculate Now
+                        </button>
+                    </form>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

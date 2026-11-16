@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit {{ item_type|capitalize }} Report - Smart Lost & Found{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="form-card">
+                <div class="d-flex align-items-center gap-3 mb-4 border-bottom pb-3">
+                    <span class="brand-icon-box" style="width: 48px; height: 48px; background: linear-gradient(135deg, #0f2444, #1e3a8a); font-size: 1.4rem;">
+                        <i class="bi bi-pencil-square"></i>
+                    </span>
+                    <div>
+                        <h3 class="fw-bold text-dark mb-0">Edit {{ item_type|capitalize }} Item Report</h3>
+                        <p class="text-muted small mb-0">Updating report will automatically trigger AI matching resynchronization</p>
+                    </div>
+                </div>
+
+                {% set target_url = url_for('lost.edit', item_id=item.id) if item_type == 'lost' else url_for('found.edit', item_id=item.id) %}
+                <form method="POST" action="{{ target_url }}" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+                    <!-- Item Name & Category -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="item_name" class="form-label">Item Title <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="item_name" name="item_name" value="{{ item.item_name }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="category" class="form-label">Category <span class="text-danger">*</span></label>
+                            <select class="form-select" id="category" name="category" required>
+                                {% for cat in ITEM_CATEGORIES %}
+                                <option value="{{ cat }}" {% if item.category == cat %}selected{% endif %}>{{ cat }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Date & Location -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="item_date" class="form-label">Date ({{ 'Lost' if item_type == 'lost' else 'Found' }}) <span class="text-danger">*</span></label>
+                            {% set current_date = item.lost_date if item_type == 'lost' else item.found_date %}
+                            <input type="date" class="form-control" id="item_date" name="{{ 'lost_date' if item_type == 'lost' else 'found_date' }}" 
+                                   value="{{ current_date.strftime('%Y-%m-%d') if current_date else '' }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="location" class="form-label">Campus Location <span class="text-danger">*</span></label>
+                            <select class="form-select" id="location" name="location" required>
+                                {% for loc in CAMPUS_LOCATIONS %}
+                                <option value="{{ loc }}" {% if item.location == loc %}selected{% endif %}>{{ loc }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    {% if item_type == 'found' %}
+                    <div class="mb-3">
+                        <label for="storage_location" class="form-label">Custody / Storage Location</label>
+                        <input type="text" class="form-control" id="storage_location" name="storage_location" 
+                               value="{{ item.storage_location or '' }}">
+                    </div>
+                    {% endif %}
+
+                    <!-- Description -->
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="description" name="description" rows="4" required>{{ item.description }}</textarea>
+                    </div>
+
+                    <!-- Additional Details -->
+                    <div class="mb-4">
+                        <label for="additional_details" class="form-label">Additional Details / Marks</label>
+                        <input type="text" class="form-control" id="additional_details" name="additional_details" 
+                               value="{{ item.additional_details or '' }}">
+                    </div>
+
+                    <!-- Image Update -->
+                    <div class="mb-4">
+                        <label class="form-label">Current Photo</label>
+                        {% if item.image_filename %}
+                        <div class="mb-2">
+                            <img src="{{ url_for('static', filename='uploads/' + item.image_filename) }}" alt="Current Photo" class="img-thumbnail" style="max-height: 140px;">
+                        </div>
+                        {% endif %}
+                        <label for="imageUploadInput" class="upload-dropzone d-block">
+                            <div id="uploadPlaceholder">
+                                <i class="bi bi-arrow-repeat text-primary fs-2 mb-1 d-block"></i>
+                                <span class="small fw-semibold text-dark">Click to upload a replacement photo (Optional)</span>
+                            </div>
+                            <div id="imagePreviewContainer" class="d-none mt-2">
+                                <img id="imagePreview" src="#" alt="New Preview" class="img-fluid rounded-3 border" style="max-height: 180px;">
+                            </div>
+                        </label>
+                        <input type="file" class="d-none" id="imageUploadInput" name="image" accept="image/png, image/jpeg, image/webp">
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                        <a href="{{ url_for('student.my_reports') }}" class="btn btn-outline-secondary rounded-pill px-4">
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary-custom rounded-pill px-5 py-2">
+                            <i class="bi bi-save me-1"></i> Save Changes & Resync AI
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
