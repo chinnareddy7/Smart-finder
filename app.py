@@ -125,11 +125,14 @@ def create_app(config_class=Config):
     except Exception:
         pass
 
+    # Create missing tables. Do not hide database connection/schema errors:
+    # Vercel logs need the real exception if DATABASE_URL is misconfigured.
     with app.app_context():
         try:
             db.create_all()
         except Exception:
-            pass
+            app.logger.exception('Database initialization failed. Check DATABASE_URL and Supabase connectivity.')
+            raise
 
     return app
 
