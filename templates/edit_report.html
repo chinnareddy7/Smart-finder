@@ -81,8 +81,8 @@
                         <label class="form-label">Current Photo</label>
                         {% if item.image_filename %}
                         <div class="mb-2">
-                            <img src="{{ url_for('static', filename='uploads/' + item.image_filename) }}" alt="Current Photo" class="img-thumbnail" style="max-height: 140px;">
-                        </div>
+                            <img src="{{ item.image_filename | image_url }}" alt="Current Photo" class="img-thumbnail" style="max-height: 140px;">
+</div></div>
                         {% endif %}
                         <label for="imageUploadInput" class="upload-dropzone d-block">
                             <div id="uploadPlaceholder">

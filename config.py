@@ -29,9 +29,11 @@ class Config:
     SQLALCHEMY_ENGINE_OPTIONS = {'pool_pre_ping': True, 'pool_recycle': 300}
     
     # Upload Settings
+        # Upload Settings
     default_uploads = '/tmp/uploads' if is_vercel else os.path.join(basedir, 'static', 'uploads')
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER') or default_uploads
-    MAX_CONTENT_LENGTH = 5 * 1024 * 1024  # 5 MB max size
+    MAX_CONTENT_LENGTH = 6 * 1024 * 1024  # 6 MB total request size
+    MAX_IMAGE_SIZE = 5 * 1024 * 1024      # 5 MB per image
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'gif'}
     
     # AI Engine Settings

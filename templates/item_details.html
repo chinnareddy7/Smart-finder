@@ -81,7 +81,7 @@
                 <!-- Item Photo -->
                 <div class="mb-4 text-center bg-light rounded-4 p-3 border">
                     {% if item.image_filename %}
-                        <img src="{{ url_for('static', filename='uploads/' + item.image_filename) }}" 
+                        <img src="{{ item.image_filename | image_url }}"
                              alt="{{ item.item_name }}" class="img-fluid rounded-3 shadow-sm" style="max-height: 420px; object-fit: contain;">
                     {% else %}
                         <div class="py-5 text-muted">

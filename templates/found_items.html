@@ -59,7 +59,7 @@
                 <div class="card saas-card h-100 card-top-accent-blue">
                     <div class="item-img-container">
                         {% if item.image_filename %}
-                            <img src="{{ url_for('static', filename='uploads/' + item.image_filename) }}" alt="{{ item.item_name }}">
+                            <img src="{{ item.image_filename | image_url }}" alt="{{ item.item_name }}">
                         {% else %}
                             <div class="text-muted text-center p-3">
                                 <i class="bi bi-image fs-1 opacity-50"></i>

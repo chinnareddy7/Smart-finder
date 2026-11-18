@@ -1,7 +1,12 @@
 import os
 from datetime import datetime, timezone
+from dotenv import load_dotenv
 from flask import Flask, render_template, request, session, abort, send_from_directory
 from flask_login import LoginManager
+
+# Load local environment variables from .env
+load_dotenv()
+
 from config import Config
 from models import db, User
 from utils import get_csrf_token
@@ -65,6 +70,12 @@ def create_app(config_class=Config):
         }
 
     # Custom Jinja filters
+    from utils import get_image_url
+
+    @app.template_filter('image_url')
+    def image_url_filter(filename):
+        return get_image_url(filename)
+
     @app.template_filter('format_date')
     def format_date(value, format_str='%b %d, %Y'):
         if not value:
