@@ -206,6 +206,40 @@
 
                 <hr class="my-3">
 
+                <!-- Public Contact Information -->
+                {% if item.contact_public and (item.contact_name or item.contact_phone or item.contact_email) %}
+                <div class="p-3 bg-primary-subtle rounded-3 border border-primary-subtle mb-3">
+                    <div class="fw-bold text-primary mb-2">
+                        <i class="bi bi-person-lines-fill me-1"></i>
+                        Public Contact Information
+                    </div>
+                    <div class="small text-dark">
+                        {% if item.contact_name %}
+                        <div class="mb-2">
+                            <strong>Name:</strong> {{ item.contact_name }}
+                        </div>
+                        {% endif %}
+
+                        {% if item.contact_phone %}
+                        <div class="mb-2">
+                            <strong>Phone:</strong>
+                            <a href="tel:{{ item.contact_phone }}" class="text-primary text-decoration-none">
+                                {{ item.contact_phone }}
+                            </a>
+                        </div>
+                        {% endif %}
+
+                        {% if item.contact_email %}
+                        <div>
+                            <strong>Email:</strong>
+                            <a href="mailto:{{ item.contact_email }}" class="text-primary text-decoration-none">
+                                {{ item.contact_email }}
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
                 <!-- Contact Details Display Logic -->
                 {% if is_owner %}
                     <!-- User is looking at their own report -->

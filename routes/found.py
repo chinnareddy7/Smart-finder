@@ -1,10 +1,16 @@
 
 from datetime import datetime
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, abort
+
+from flask import (
+    Blueprint, render_template, redirect, url_for, flash,
+    request, current_app, abort
+)
 from flask_login import login_required, current_user
+
 from models import db, FoundItem, LostItem, Match, ContactRequest
 from utils import ImageUploadError, save_uploaded_image, validate_csrf
 from ai_engine.matching import sync_matches_for_found_item
+
 
 found_bp = Blueprint('found', __name__)
 
@@ -54,8 +60,12 @@ def browse():
 def report():
     if request.method == 'POST':
         csrf_token = request.form.get('csrf_token')
+
         if not validate_csrf(csrf_token):
-            flash('Security validation token mismatch. Please try again.', 'danger')
+            flash(
+                'Security validation token mismatch. Please try again.',
+                'danger'
+            )
             return redirect(url_for('found.report'))
 
         item_name = request.form.get('item_name', '').strip()
@@ -64,20 +74,38 @@ def report():
         location = request.form.get('location', '').strip()
         found_date_str = request.form.get('found_date', '').strip()
         storage_location = request.form.get('storage_location', '').strip()
-        additional_details = request.form.get('additional_details', '').strip()
+        additional_details = request.form.get(
+            'additional_details', ''
+        ).strip()
 
-        # Validation
-        if not all([item_name, category, description, location, found_date_str]):
+        # Contact Details
+        contact_name = request.form.get('contact_name', '').strip()
+        contact_phone = request.form.get('contact_phone', '').strip()
+        contact_email = request.form.get('contact_email', '').strip()
+        contact_public = request.form.get('contact_public') == 'on'
+
+        # Validate required fields
+        if not all([
+            item_name, category, description, location, found_date_str
+        ]):
             flash('Please fill in all mandatory fields.', 'warning')
-            return render_template('report_found.html', form_data=request.form)
+            return render_template(
+                'report_found.html',
+                form_data=request.form
+            )
 
         try:
-            found_date = datetime.strptime(found_date_str, '%Y-%m-%d').date()
+            found_date = datetime.strptime(
+                found_date_str, '%Y-%m-%d'
+            ).date()
         except ValueError:
             flash('Invalid date format. Use YYYY-MM-DD.', 'danger')
-            return render_template('report_found.html', form_data=request.form)
+            return render_template(
+                'report_found.html',
+                form_data=request.form
+            )
 
-        # Image upload
+        # Image Upload
         image_file = request.files.get('image')
         image_filename = None
 
@@ -91,7 +119,7 @@ def report():
                     form_data=request.form
                 )
 
-        # Save found item
+        # Save Found Item
         found_item = FoundItem(
             user_id=current_user.id,
             item_name=item_name,
@@ -99,15 +127,23 @@ def report():
             description=description,
             location=location,
             found_date=found_date,
-            storage_location=storage_location or 'With Finder / Reach out via platform',
+            storage_location=(
+                storage_location or
+                'With Finder / Reach out via platform'
+            ),
             additional_details=additional_details,
+            contact_name=contact_name,
+            contact_phone=contact_phone,
+            contact_email=contact_email,
+            contact_public=contact_public,
             image_filename=image_filename,
             status='Found'
         )
+
         db.session.add(found_item)
         db.session.commit()
 
-        # Run AI matching against active lost items
+        # Run AI Matching Against Active Lost Items
         matches = sync_matches_for_found_item(
             db,
             found_item,
@@ -118,13 +154,23 @@ def report():
         if matches:
             best_match = matches[0]
             flash(
-                f"Found item recorded! AI Engine identified {len(matches)} student lost report(s) matching this item (Top match: {best_match.similarity_score}%). Notification sent to the possible owner!",
+                f"Found item recorded! AI Engine identified "
+                f"{len(matches)} student lost report(s) matching "
+                f"this item (Top match: "
+                f"{best_match.similarity_score}%). "
+                f"Notification sent to the possible owner!",
                 'success'
             )
         else:
-            flash("Found item registered successfully! Thank you for being a responsible campus citizen.", 'success')
+            flash(
+                "Found item registered successfully! Thank you "
+                "for being a responsible campus citizen.",
+                'success'
+            )
 
-        return redirect(url_for('found.details', item_id=found_item.id))
+        return redirect(
+            url_for('found.details', item_id=found_item.id)
+        )
 
     return render_template('report_found.html')
 
@@ -138,13 +184,20 @@ def details(item_id):
     )
 
     matches = []
+
     if is_owner:
         matches = item.matches.filter(
             Match.status != 'Dismissed'
-        ).order_by(Match.similarity_score.desc()).all()
+        ).order_by(
+            Match.similarity_score.desc()
+        ).all()
 
     user_request = None
-    if current_user.is_authenticated and current_user.id != item.user_id:
+
+    if (
+        current_user.is_authenticated
+        and current_user.id != item.user_id
+    ):
         user_request = ContactRequest.query.filter_by(
             sender_id=current_user.id,
             found_item_id=item.id
@@ -170,27 +223,71 @@ def edit(item_id):
 
     if request.method == 'POST':
         csrf_token = request.form.get('csrf_token')
+
         if not validate_csrf(csrf_token):
             flash('Security validation token mismatch.', 'danger')
-            return redirect(url_for('found.edit', item_id=item.id))
+            return redirect(
+                url_for('found.edit', item_id=item.id)
+            )
 
-        item.item_name = request.form.get('item_name', '').strip()
-        item.category = request.form.get('category', '').strip()
-        item.description = request.form.get('description', '').strip()
-        item.location = request.form.get('location', '').strip()
-        found_date_str = request.form.get('found_date', '').strip()
-        item.storage_location = request.form.get('storage_location', '').strip()
-        item.additional_details = request.form.get('additional_details', '').strip()
+        item.item_name = request.form.get(
+            'item_name', ''
+        ).strip()
 
+        item.category = request.form.get(
+            'category', ''
+        ).strip()
+
+        item.description = request.form.get(
+            'description', ''
+        ).strip()
+
+        item.location = request.form.get(
+            'location', ''
+        ).strip()
+
+        found_date_str = request.form.get(
+            'found_date', ''
+        ).strip()
+
+        item.storage_location = request.form.get(
+            'storage_location', ''
+        ).strip()
+
+        item.additional_details = request.form.get(
+            'additional_details', ''
+        ).strip()
+
+        # Update Contact Details
+        item.contact_name = request.form.get(
+            'contact_name', ''
+        ).strip()
+
+        item.contact_phone = request.form.get(
+            'contact_phone', ''
+        ).strip()
+
+        item.contact_email = request.form.get(
+            'contact_email', ''
+        ).strip()
+
+        item.contact_public = (
+            request.form.get('contact_public') == 'on'
+        )
+
+        # Update Found Date
         if found_date_str:
             try:
                 item.found_date = datetime.strptime(
                     found_date_str, '%Y-%m-%d'
                 ).date()
             except ValueError:
-                pass
+                flash('Invalid date format.', 'danger')
+                return redirect(
+                    url_for('found.edit', item_id=item.id)
+                )
 
-        # Optional image update
+        # Optional Image Update
         image_file = request.files.get('image')
 
         if image_file and image_file.filename != '':
@@ -199,22 +296,35 @@ def edit(item_id):
             except ImageUploadError as e:
                 db.session.rollback()
                 flash(str(e), 'danger')
-                return redirect(url_for('found.edit', item_id=item_id))
+                return redirect(
+                    url_for('found.edit', item_id=item_id)
+                )
 
             item.image_filename = new_filename
 
         db.session.commit()
 
+        # Refresh AI Matches
         sync_matches_for_found_item(
             db,
             item,
             threshold=current_app.config['AI_MATCH_THRESHOLD']
         )
 
-        flash('Found item report updated and AI matches updated.', 'success')
-        return redirect(url_for('found.details', item_id=item.id))
+        flash(
+            'Found item report updated and AI matches updated.',
+            'success'
+        )
 
-    return render_template('edit_report.html', item=item, item_type='found')
+        return redirect(
+            url_for('found.details', item_id=item.id)
+        )
+
+    return render_template(
+        'edit_report.html',
+        item=item,
+        item_type='found'
+    )
 
 
 @found_bp.route('/found/<int:item_id>/delete', methods=['POST'])
@@ -226,16 +336,21 @@ def delete(item_id):
         abort(403)
 
     csrf_token = request.form.get('csrf_token')
+
     if not validate_csrf(csrf_token):
         flash('Security validation token mismatch.', 'danger')
         return redirect(url_for('student.my_reports'))
 
     item_name = item.item_name
+
     db.session.delete(item)
     db.session.commit()
 
     flash(f"Found report for '{item_name}' removed.", 'info')
-    return redirect(url_for('student.my_reports', tab='found'))
+
+    return redirect(
+        url_for('student.my_reports', tab='found')
+    )
 
 
 @found_bp.route('/found/<int:item_id>/claim-status', methods=['POST'])
@@ -247,15 +362,24 @@ def mark_claimed(item_id):
         abort(403)
 
     csrf_token = request.form.get('csrf_token')
+
     if not validate_csrf(csrf_token):
         flash('Security token invalid.', 'danger')
-        return redirect(url_for('found.details', item_id=item.id))
+        return redirect(
+            url_for('found.details', item_id=item.id)
+        )
 
     new_status = request.form.get('status', 'Claimed')
 
     if new_status in ['Found', 'Claimed', 'Handed Over']:
         item.status = new_status
         db.session.commit()
-        flash(f"Status updated to '{new_status}'.", 'success')
 
-    return redirect(url_for('found.details', item_id=item.id))
+        flash(
+            f"Status updated to '{new_status}'.",
+            'success'
+        )
+
+    return redirect(
+        url_for('found.details', item_id=item.id)
+    )
